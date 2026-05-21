@@ -26,11 +26,11 @@ def get_db():
             ssl_ca_path = "/etc/ssl/certs/ca-certificates.crt"
         
         conn = mysql.connector.connect(
-            host=os.getenv("DB_HOST"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            database=os.getenv("DB_NAME"),
-            port=int(os.getenv("DB_PORT") or 3306),
+            host=os.getenv("MYSQLHOST"),        
+            user=os.getenv("MYSQLUSER"),        
+            password=os.getenv("MYSQLPASSWORD"),
+            database=os.getenv("MYSQLDATABASE"),
+            port=int(os.getenv("MYSQLPORT") or 3306), 
             ssl_disabled=False,
             ssl_ca=ssl_ca_path
         )
@@ -443,7 +443,9 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Error: {error}", exc_info=True)
 
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    # Langsung panggil os.getenv di sini agar terbaca sempurna oleh Railway
+    token_bot = os.getenv("BOT_TOKEN")
+    app = ApplicationBuilder().token(token_bot).build()
 
     app.add_handler(CommandHandler("start", start))
     
@@ -462,6 +464,3 @@ def main():
 
     logger.info("Bot Berjalan...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
-
-if __name__ == "__main__":
-    main()
