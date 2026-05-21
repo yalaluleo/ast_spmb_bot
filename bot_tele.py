@@ -165,69 +165,66 @@ async def handle_submission(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not msg:
         return
 
-    if msg.text and not msg.photo and not msg.document:
-        return
-    elif not (msg.photo or msg.document):
-        return
+    if msg.photo or msg.document:
 
-    admin_msg = (
-        f"Peserta Baru\n"
-        f"User ID: {user.id}\n"
-        f"Display name: {user.full_name}\n"
-        f"Username: @{user.username if user.username else 'N/A'}\n\n"
-        f"Pesan: {msg.text or msg.caption or '(tanpa teks)'}\n"
-        f"Status: Menunggu Admin"
-    )
+        admin_msg = (
+            f"Peserta Baru\n"
+            f"User ID: {user.id}\n"
+            f"Display name: {user.full_name}\n"
+            f"Username: @{user.username if user.username else 'N/A'}\n\n"
+            f"Pesan: {msg.text or msg.caption or '(tanpa teks)'}\n"
+            f"Status: Menunggu Admin"
+        )
 
-    keyboard = get_admin_keyboard(user.id, "pending")
+        keyboard = get_admin_keyboard(user.id, "pending")
 
-    try:
-        if msg.media_group_id:
-            # Handle album
-            if msg.media_group_id not in pending_albums:
-                pending_albums[msg.media_group_id] = {
-                    "messages": [],
-                    "user_id": user.id,
-                    "chat_id": msg.chat_id,
-                    "username": user.username,
-                    "full_name": user.full_name,
-                    "admin_msg": admin_msg,
-                    "keyboard": keyboard,
-                }
-            
-            pending_albums[msg.media_group_id]["messages"].append(msg)
-            
-            if len(pending_albums[msg.media_group_id]["messages"]) == 1:
-                asyncio.create_task(process_album_after_delay(context, msg.media_group_id))
-            return
-            
-        elif msg.photo:
-            file_id = msg.photo[-1].file_id
-            sent = await context.bot.send_photo(
-                CHANNEL_ID,
-                photo=file_id,
-                caption=admin_msg,
-                reply_markup=keyboard
-            )
-            save_mapping(user.id, msg.chat_id, sent.message_id)
-            save_to_mysql(user.id, user.username, user.full_name, sent.message_id, file_id)
-            await msg.reply_text("Bukti kamu sudah kami terima. Tunggu verifikasi dari admin ya!")
-            
-        elif msg.document:
-            file_id = msg.document.file_id
-            sent = await context.bot.send_document(
-                CHANNEL_ID,
-                document=file_id,
-                caption=admin_msg,
-                reply_markup=keyboard
-            )
-            save_mapping(user.id, msg.chat_id, sent.message_id)
-            save_to_mysql(user.id, user.username, user.full_name, sent.message_id, file_id)
-            await msg.reply_text("Bukti kamu sudah kami terima. Tunggu verifikasi dari admin ya!")
+        try:   # ✅ SEKARANG try: SEJAJAR dengan admin_msg (8 spasi)
+            if msg.media_group_id:
+                # Handle album
+                if msg.media_group_id not in pending_albums:
+                    pending_albums[msg.media_group_id] = {
+                        "messages": [],
+                        "user_id": user.id,
+                        "chat_id": msg.chat_id,
+                        "username": user.username,
+                        "full_name": user.full_name,
+                        "admin_msg": admin_msg,
+                        "keyboard": keyboard,
+                    }
+                
+                pending_albums[msg.media_group_id]["messages"].append(msg)
+                
+                if len(pending_albums[msg.media_group_id]["messages"]) == 1:
+                    asyncio.create_task(process_album_after_delay(context, msg.media_group_id))
+                return
+                
+            elif msg.photo:
+                file_id = msg.photo[-1].file_id
+                sent = await context.bot.send_photo(
+                    CHANNEL_ID,
+                    photo=file_id,
+                    caption=admin_msg,
+                    reply_markup=keyboard
+                )
+                save_mapping(user.id, msg.chat_id, sent.message_id)
+                save_to_mysql(user.id, user.username, user.full_name, sent.message_id, file_id)
+                await msg.reply_text("Bukti kamu sudah kami terima. Tunggu verifikasi dari admin ya!")
+                
+            elif msg.document:
+                file_id = msg.document.file_id
+                sent = await context.bot.send_document(
+                    CHANNEL_ID,
+                    document=file_id,
+                    caption=admin_msg,
+                    reply_markup=keyboard
+                )
+                save_mapping(user.id, msg.chat_id, sent.message_id)
+                save_to_mysql(user.id, user.username, user.full_name, sent.message_id, file_id)
+                await msg.reply_text("Bukti kamu sudah kami terima. Tunggu verifikasi dari admin ya!")
 
-    except Exception as e:
-        logger.error(f"Error in handle_submission: {e}")
-        await msg.reply_text("Maaf, terjadi error. Silakan kirim ulang.")
+        except Exception as e:
+            logger.error(f"Error in handle_submission: {e}")
+            await msg.reply_text("Maaf, terjadi error. Silakan kirim ulang.")
 
 async def process_album_after_delay(context, album_id):
     await asyncio.sleep(2)
@@ -369,7 +366,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await context.bot.send_message(
                     user_info["chat_id"],
                     "Oops! Sepertinya persyaratan kamu belum lengkap.\n\n"
-                    "Mohon pastikan kamu telah mengirim persyaratan dalam bentuk foto atau PDF.\n\n"
+                    "Mohon pastikan kamu telah mengirim persyaratan dalam bentuk foto atau PDF, yang berupa:\n\n"
+                    "✅ Screenshot follow Instagram @anaksmatangerang\n"
+                    "✅ Screenshot repost postingan ke Instagram Story\n"
+                    "✅ Screenshot komentar yang berisi mention 5 teman di postingan alur join grup Telegram SPMB Banten 2026 (lihat di postingan yang dipin paling atas)\n\n"
                     "Silakan kirim ulang bukti kamu jika ada yang terlewat ya. Terima kasih 😊"
                 )
 
