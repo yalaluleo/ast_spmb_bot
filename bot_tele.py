@@ -3,8 +3,15 @@
 This script is not licensed for reuse or distribution without permission.
 Enhanced for SPMB Banten 2026: MySQL, Admin Claim (Ambil Tugas), and Transparency.
 """
-import os
 import sys
+import os
+
+# CEK VERSI PYTHON
+print(f"🐍 Python version: {sys.version}")
+if sys.version_info >= (3, 13):
+    print("⚠️  WARNING: Python 3.13+ may have compatibility issues")
+    print("⚠️  Recommended: Use Python 3.11 or 3.12")
+
 import asyncio
 import logging
 from datetime import datetime
