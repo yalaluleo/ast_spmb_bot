@@ -21,18 +21,12 @@ import time
 
 def get_db():
     try:
-        ssl_ca_path = "ca.pem"
-        if not os.path.exists(ssl_ca_path):
-            ssl_ca_path = "/etc/ssl/certs/ca-certificates.crt"
-        
         conn = mysql.connector.connect(
             host=os.getenv("MYSQLHOST"),        
             user=os.getenv("MYSQLUSER"),        
             password=os.getenv("MYSQLPASSWORD"),
             database=os.getenv("MYSQLDATABASE"),
-            port=int(os.getenv("MYSQLPORT") or 3306), 
-            ssl_disabled=False,
-            ssl_ca=ssl_ca_path
+            port=int(os.getenv("MYSQLPORT") or 3306)
         )
         return conn
     except Exception as e:
