@@ -18,62 +18,101 @@ import asyncio
 from datetime import datetime
 import logging
 import time
+import sys
 
-def get_db():
-    try:
-        conn = mysql.connector.connect(
-            host=os.getenv("MYSQLHOST"),        
-            user=os.getenv("MYSQLUSER"),        
-            password=os.getenv("MYSQLPASSWORD"),
-            database=os.getenv("MYSQLDATABASE"),
-            port=int(os.getenv("MYSQLPORT") or 3306)
-        )
-        return conn
-    except Exception as e:
-        logger.error(f"Database connection error: {e}")
-        raise
-
-# ========== KONFIGURASI ==========
-BOT_TOKEN = os.getenv("BOT_TOKEN") 
-CHANNEL_ID = -1002605314830
-GROUP_LINK = 'https://t.me/+LR28DxO9IJU2Y2Vl'
-
-# ========== SETUP LOGGING ==========
+# ========== SETUP LOGGING (HARUS DIATAS FUNGSI LAIN) ==========
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
+# ========== KONFIGURASI ==========
+BOT_TOKEN = os.getenv("BOT_TOKEN") 
+CHANNEL_ID = os.getenv("CHANNEL_ID")  
+GROUP_LINK = os.getenv("GROUP_LINK", 'https://t.me/+LR28DxO9IJU2Y2Vl')
+
+# CEK ENVIRONMENT VARIABLE PENTING
+required_vars = ["BOT_TOKEN", "MYSQLHOST", "MYSQLUSER", "MYSQLPASSWORD", "MYSQLDATABASE", "CHANNEL_ID"]
+missing_vars = [var for var in required_vars if not os.getenv(var)]
+if missing_vars:
+    logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+    sys.exit(1)
+
+# Konversi CHANNEL_ID ke integer (karena dari env berupa string)
+try:
+    CHANNEL_ID = int(CHANNEL_ID)
+except ValueError:
+    logger.error(f"CHANNEL_ID must be an integer, got: {CHANNEL_ID}")
+    sys.exit(1)
+
 # ========== DATABASE ==========
+def get_db():
+    """Buat koneksi database baru"""
+    try:
+        conn = mysql.connector.connect(
+            host=os.getenv("MYSQLHOST"),        
+            user=os.getenv("MYSQLUSER"),        
+            password=os.getenv("MYSQLPASSWORD"),
+            database=os.getenv("MYSQLDATABASE"),
+            port=int(os.getenv("MYSQLPORT") or 3306),
+            connect_timeout=10
+        )
+        logger.info("Database connected successfully")
+        return conn
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
+        return None
+
 user_data = {}
 message_to_user = {}
 admin_replies = {}
 pending_albums = {}
 
 def save_to_mysql(user_id, username, full_name, msg_id, file_id=None):
+    """Simpan data ke MySQL dengan error handling yang lebih baik"""
+    db = None
     try:
         db = get_db()
+        if not db:
+            logger.error("Failed to get database connection")
+            return False
+            
         cursor = db.cursor()
-        sql = "INSERT INTO submissions (user_id, username, full_name, admin_msg_id, file_id) VALUES (%s, %s, %s, %s, %s)"
+        sql = """INSERT INTO submissions (user_id, username, full_name, admin_msg_id, file_id, status, created_at) 
+                 VALUES (%s, %s, %s, %s, %s, 'pending', NOW())"""
         cursor.execute(sql, (user_id, username, full_name, msg_id, file_id))
         db.commit()
-        db.close()
         logger.info(f"Data saved to MySQL for user {user_id}")
+        return True
     except Exception as e:
         logger.error(f"MySQL Insert Error: {e}")
+        return False
+    finally:
+        if db:
+            db.close()
 
 def update_admin_status(msg_id, status, admin_name):
+    """Update status di database"""
+    db = None
     try:
         db = get_db()
+        if not db:
+            logger.error("Failed to get database connection")
+            return False
+            
         cursor = db.cursor()
-        sql = "UPDATE submissions SET status = %s, admin_handler = %s WHERE admin_msg_id = %s"
+        sql = "UPDATE submissions SET status = %s, admin_handler = %s, updated_at = NOW() WHERE admin_msg_id = %s"
         cursor.execute(sql, (status, admin_name, msg_id))
         db.commit()
-        db.close()
         logger.info(f"Updated status for msg {msg_id} to {status} by {admin_name}")
+        return True
     except Exception as e:
         logger.error(f"MySQL Update Error: {e}")
+        return False
+    finally:
+        if db:
+            db.close()
 
 def get_admin_keyboard(user_id, status="pending"):
     if status == "pending":
@@ -101,14 +140,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Link postingan: https://www.instagram.com/p/DYEK3nyCWcz/?igsh=MXZ6dXVwb295MndodQ==\n\n"
             "Kirimkan bukti dalam bentuk foto (maksimal 10 foto) atau PDF di chat ini. Terima kasih 😊"
         )
-
-        #example_message = (
-        #    "Silakan cek panduan lengkap mengenai persyaratan di bawah ini:\n"
-        #    "https://www.instagram.com/s/aGlnaGxpZ2h0OjE3OTM1MTE5MTIwMDE2Mjg0?story_media_id=3642957998978679121_2999424744&igsh=MXU5dzBpM20ybGo3Zw=="
-        #)
-
-        #await update.message.reply_text(example_message)
-
     except Exception as e:
         logger.error(f"Error in start: {e}")
         await update.message.reply_text("Maaf, terjadi kesalahan. Silakan coba lagi.")
@@ -121,7 +152,7 @@ async def handle_submission(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if msg.text and not msg.photo and not msg.document:
-        pass
+        return  # Abaikan text biasa
     elif not (msg.photo or msg.document):
         return
 
@@ -185,16 +216,6 @@ async def handle_submission(update: Update, context: ContextTypes.DEFAULT_TYPE):
             save_mapping(user.id, msg.chat_id, sent.message_id)
             save_to_mysql(user.id, user.username, user.full_name, sent.message_id, file_id)
             await msg.reply_text("Bukti kamu sudah kami terima. Tunggu verifikasi dari admin ya!")
-            
-        elif msg.text:
-            sent = await context.bot.send_message(
-                CHANNEL_ID,
-                text=admin_msg,
-                reply_markup=keyboard
-            )
-            save_mapping(user.id, msg.chat_id, sent.message_id)
-            save_to_mysql(user.id, user.username, user.full_name, sent.message_id, None)
-            await msg.reply_text("Pesan kamu sudah kami terima. Tunggu balasan dari admin ya!")
 
     except Exception as e:
         logger.error(f"Error in handle_submission: {e}")
@@ -272,12 +293,13 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not user_id:
         try:
             db = get_db()
-            cursor = db.cursor()
-            cursor.execute("SELECT user_id FROM submissions WHERE admin_msg_id = %s", (replied_id,))
-            result = cursor.fetchone()
-            if result:
-                user_id = result[0]
-            db.close()
+            if db:
+                cursor = db.cursor()
+                cursor.execute("SELECT user_id FROM submissions WHERE admin_msg_id = %s", (replied_id,))
+                result = cursor.fetchone()
+                if result:
+                    user_id = result[0]
+                db.close()
         except Exception as e:
             logger.error(f"DB Search Error: {e}")
 
@@ -427,17 +449,40 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Error in handle_callback: {e}")
-        try:
-            await query.message.reply_text(f"Error: {str(e)}")
-        except:
-            pass
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     error = context.error
     logger.error(f"Error: {error}", exc_info=True)
 
+async def test_bot():
+    """Fungsi test untuk memastikan bot bisa connect ke Telegram"""
+    try:
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+        me = await app.bot.get_me()
+        logger.info(f"Bot connected successfully! Bot name: {me.full_name} (@{me.username})")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to connect to Telegram: {e}")
+        return False
+
 def main():
-    # Langsung panggil os.getenv di sini agar terbaca sempurna oleh Railway
+    logger.info("Starting bot...")
+    
+    # Test koneksi ke Telegram
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    if not loop.run_until_complete(test_bot()):
+        logger.error("Bot test failed, exiting...")
+        sys.exit(1)
+    
+    # Test koneksi database
+    db = get_db()
+    if not db:
+        logger.error("Database connection test failed, exiting...")
+        sys.exit(1)
+    db.close()
+    logger.info("Database connection test successful")
+    
     token_bot = os.getenv("BOT_TOKEN")
     app = ApplicationBuilder().token(token_bot).build()
 
@@ -456,5 +501,8 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_error_handler(error_handler)
 
-    logger.info("Bot Berjalan...")
+    logger.info("Bot is running and polling for updates...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == "__main__":
+    main()
