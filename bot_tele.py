@@ -166,7 +166,6 @@ async def handle_submission(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if msg.photo or msg.document:
-
         admin_msg = (
             f"Peserta Baru\n"
             f"User ID: {user.id}\n"
@@ -178,7 +177,7 @@ async def handle_submission(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = get_admin_keyboard(user.id, "pending")
 
-        try:   # ✅ SEKARANG try: SEJAJAR dengan admin_msg (8 spasi)
+        try:
             if msg.media_group_id:
                 # Handle album
                 if msg.media_group_id not in pending_albums:
@@ -225,6 +224,31 @@ async def handle_submission(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Error in handle_submission: {e}")
             await msg.reply_text("Maaf, terjadi error. Silakan kirim ulang.")
+    
+    else:
+        # KALAU USER KIRIM TEKS BIASA
+        admin_msg_text = (
+            f"Pesan dari User\n"
+            f"User ID: {user.id}\n"
+            f"Nama: {user.full_name}\n"
+            f"Username: @{user.username if user.username else 'N/A'}\n\n"
+            f"Pesan: {msg.text}\n"
+            f"Status: Menunggu Balasan Admin"
+        )
+        
+        keyboard = get_admin_keyboard(user.id, "pending")
+        
+        sent = await context.bot.send_message(
+            CHANNEL_ID,
+            text=admin_msg_text,
+            reply_markup=keyboard
+        )
+        
+        save_mapping(user.id, msg.chat_id, sent.message_id)
+        save_to_mysql(user.id, user.username, user.full_name, sent.message_id, None)
+        
+        await msg.reply_text("Pesan kamu sudah kami terima. Tunggu balasan dari admin ya!")
+        return
 
 async def process_album_after_delay(context, album_id):
     await asyncio.sleep(2)
