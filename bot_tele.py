@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ========== KONFIGURASI ==========
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
-GROUP_LINK = os.getenv("GROUP_LINK", 'https://t.me/+LR28DxO9IJU2Y2Vl')
+GROUP_LINK = os.getenv("GROUP_LINK", 'https://t.me/+h0ph8Z8PV8QyZTc1')
 
 # CEK ENVIRONMENT VARIABLE PENTING
 required_vars = ["BOT_TOKEN", "MYSQLHOST", "MYSQLUSER", "MYSQLPASSWORD", "MYSQLDATABASE", "CHANNEL_ID"]
