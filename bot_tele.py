@@ -64,7 +64,7 @@ BOTS_CONFIG = {
         "approve_text": (
             "Terima kasih ASTers! Persyaratan kamu sudah lengkap.\n\n"
             "Silakan klik link berikut untuk bergabung ke Grup Info SPMB Banten 2026:\n"
-            "{GROUP_LINK_BANTEN}\n\n"
+            "{group_link}\n\n"
             "Sampai jumpa di grup!"
         ),
         "reject_text": (
@@ -94,7 +94,7 @@ BOTS_CONFIG = {
         "approve_text": (
             "Terima kasih JakStars! Persyaratan kamu sudah lengkap.\n\n"
             "Silakan klik link berikut untuk bergabung ke Grup Info SPMB DKI Jakarta 2026:\n"
-            "{GROUP_LINK_JAKARTA}\n\n"
+            "{group_link}\n\n"
             "Sampai jumpa di grup!"
         ),
         "reject_text": (
@@ -573,37 +573,34 @@ async def run_bot(region: str, config: dict):
     app.bot_data["region"] = region
     app.bot_data["channel_id"] = channel_id
     
-    # Add handlers - CLOSURE untuk menangkap region dan config
-    async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        context.bot_data["region"] = region
-        await start(update, context)
-    
-    async def submission_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        context.bot_data["region"] = region
-        await handle_submission(update, context)
-    
-    async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        context.bot_data["region"] = region
-        await handle_admin_reply(update, context)
-    
-    async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        context.bot_data["region"] = region
-        await handle_callback(update, context)
-    
-    app.add_handler(CommandHandler("start", start_handler))
+    # Add handlers
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(
         filters.ChatType.PRIVATE & (filters.PHOTO | filters.Document.ALL | filters.TEXT) & (~filters.COMMAND),
-        submission_handler
+        handle_submission
     ))
     app.add_handler(MessageHandler(
         filters.Chat(channel_id) & filters.REPLY,
-        admin_reply_handler
+        handle_admin_reply
     ))
-    app.add_handler(CallbackQueryHandler(callback_handler))
+    app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_error_handler(error_handler)
 
     logger.info(f"Bot for {region} is running...")
-    await app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=False)
+    
+    # Initialize and start polling
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    
+    # Keep the bot running
+    try:
+        await asyncio.Future()  # Run forever
+    except asyncio.CancelledError:
+        logger.info(f"Bot for {region} is stopping...")
+        await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
 
 # ========== MAIN ==========
 async def main():
@@ -622,7 +619,7 @@ async def main():
     
     for region, config in BOTS_CONFIG.items():
         if config["token"] and config["channel_id"]:
-            bot_tasks.append(run_bot(region, config))
+            bot_tasks.append(asyncio.create_task(run_bot(region, config)))
             logger.info(f"Prepared to start bot for {region}")
         else:
             logger.warning(f"Skipping {region} - missing token or channel_id")
@@ -635,4 +632,7 @@ async def main():
     await asyncio.gather(*bot_tasks)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
