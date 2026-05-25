@@ -88,7 +88,7 @@ BOTS_CONFIG = {
             "✅ Screenshot follow Instagram @anaksma.jakarta\n"
             "✅ Screenshot repost postingan ke Instagram Story\n"
             "✅ Screenshot komentar yang berisi mention 5 teman di postingan alur join grup Telegram SPMB DKI Jakarta 2026\n\n"
-            "Link postingan: https://www.instagram.com/p/CONTOH_LINK_JAKARTA/\n\n"
+            "Link postingan: https://www.instagram.com/p/DYwEhkRkx34/?igsh=amZmZWxqeDFzcnZi\n\n"
             "Kirimkan bukti dalam bentuk foto (maksimal 10 foto) atau PDF di chat ini. Terima kasih 😊"
         ),
         "approve_text": (
