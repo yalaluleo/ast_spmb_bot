@@ -42,7 +42,7 @@ GROUP_LINK_BANTEN = os.getenv("GROUP_LINK_BANTEN", 'https://t.me/+Pqfw_cELI7w0Y2
 # Konfigurasi untuk Jakarta
 BOT_TOKEN_JAKARTA = os.getenv("BOT_TOKEN_JAKARTA")
 CHANNEL_ID_JAKARTA = os.getenv("CHANNEL_ID_JAKARTA")
-GROUP_LINK_JAKARTA = os.getenv("GROUP_LINK_JAKARTA", 'https://t.me/+8cJDNLD7Dw1iMWE1')
+GROUP_LINK_JAKARTA = os.getenv("GROUP_LINK_JAKARTA", 'https://t.me/+l_eo-uf5bK9iYTU1')
 
 # Dictionary untuk menyimpan semua konfigurasi bot
 BOTS_CONFIG = {
