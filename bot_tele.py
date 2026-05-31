@@ -37,12 +37,12 @@ logger = logging.getLogger(__name__)
 # Konfigurasi untuk Banten
 BOT_TOKEN_BANTEN = os.getenv("BOT_TOKEN_BANTEN")
 CHANNEL_ID_BANTEN = os.getenv("CHANNEL_ID_BANTEN")
-GROUP_LINK_BANTEN = os.getenv("GROUP_LINK_BANTEN", 'https://t.me/+bcDg1A72WPg3N2M1')
+GROUP_LINK_BANTEN = os.getenv("GROUP_LINK_BANTEN", 'https://t.me/+3I2Rij7GB4lmMWFl')
 
 # Konfigurasi untuk Jakarta
 BOT_TOKEN_JAKARTA = os.getenv("BOT_TOKEN_JAKARTA")
 CHANNEL_ID_JAKARTA = os.getenv("CHANNEL_ID_JAKARTA")
-GROUP_LINK_JAKARTA = os.getenv("GROUP_LINK_JAKARTA", 'https://t.me/+EZMl4znED0BlZDU1')
+GROUP_LINK_JAKARTA = os.getenv("GROUP_LINK_JAKARTA", 'https://t.me/+YxHEHqtPh-phZWU1')
 
 # Dictionary untuk menyimpan semua konfigurasi bot
 BOTS_CONFIG = {
